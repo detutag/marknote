@@ -1,6 +1,6 @@
 # MarkNote
 
-類 Notion 的 Markdown 筆記 Web App：Next.js 15（App Router）+ Neon Postgres（HTTP driver）+ Netlify 部署。
+類 Notion 的 Markdown 筆記 Web App：Next.js 15（App Router）+ Neon Postgres（HTTP driver）+ Netlify／Vercel 部署。
 單一密碼進站、淺色／深色主題、三欄桌面版面（分類／標籤 → 筆記列表 → 編輯／閱讀），
 閱讀模式可內嵌外部圖片、音訊、影片與 YouTube／Vimeo／Bilibili；
 另附檔案庫（Neon Object Storage，S3 相容），可一次上傳多檔並在筆記中插入。
@@ -19,7 +19,7 @@
 
 ## 環境變數
 
-複製 `.env.example` 為 `.env.local`（本機）或直接在 Netlify 設定：
+複製 `.env.example` 為 `.env.local`（本機）或直接在 Netlify／Vercel 設定：
 
 | 變數 | 必填 | 說明 |
 | --- | --- | --- |
@@ -35,6 +35,7 @@
 | `AWS_ACCESS_KEY_ID` | 檔案庫 | 物件儲存存取金鑰 |
 | `AWS_SECRET_ACCESS_KEY` | 檔案庫 | 物件儲存私鑰 |
 | `AWS_REGION` | 檔案庫 | 例如 `ap-southeast-1`，預設 `us-east-1` |
+| `S3_ENDPOINT`／`S3_ACCESS_KEY_ID`／`S3_SECRET_ACCESS_KEY`／`S3_REGION` | – | 上面四個 `AWS_*` 的同義變數，兩者都有時優先採用 `S3_*`（Vercel 建議用這組） |
 | `STORAGE_BUCKET` | 檔案庫 | bucket 名稱，例如 `marknote-files` |
 | `STORAGE_MAX_UPLOAD_MB` | – | 單檔上限，預設 200（上限 5120） |
 | `APP_ORIGIN` | – | `storage:init` 設定 CORS 用，逗號分隔多來源 |
@@ -88,6 +89,24 @@ bash dev/run-local.sh stop
    ```
 
 > 注意：`DATABASE_URL` 請用 **pooled** 連線；`AUTH_SECRET` 一旦更換，既有 session 會全部失效。
+
+## 部署到 Vercel
+
+Next.js 由 Vercel 原生支援，不需要額外設定（`netlify.toml` 會被忽略，安全標頭改由 `next.config.mjs` 套用）。
+
+1. 同上建立 Neon 專案並建表。
+2. Vercel → Add New → Project，匯入此 repo；Framework 自動偵測為 Next.js，Build／Output 用預設值。
+3. Settings → Environment Variables 設定 `DATABASE_URL`、`APP_PASSWORD`、`AUTH_SECRET`；
+   想在 Preview 部署測試，記得把變數也勾選 Preview 環境。
+4. 啟用檔案庫：建議用 `S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY`、`S3_REGION`、`STORAGE_BUCKET`。
+   Vercel 會在函式內自動注入 `AWS_REGION` 等變數（不是你的金鑰），用 `S3_*` 可避免讀到平台的值。
+5. 用正式網址初始化 bucket CORS（多個網址以逗號分隔，Preview 網址也可加入）：
+
+   ```bash
+   APP_ORIGIN=https://your-project.vercel.app npm run storage:init
+   ```
+
+6. 上傳走瀏覽器直傳 bucket 的 presigned URL，不受 Vercel 函式 4.5 MB 請求大小限制。
 
 ## 結構
 

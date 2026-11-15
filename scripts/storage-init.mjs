@@ -34,7 +34,7 @@ const { ensureBucket } = await import('../lib/storage.js');
 const cfg = getStorageConfig();
 if (!cfg.configured) {
   console.error('✗ 尚未設定物件儲存，請確認以下變數：');
-  console.error('  AWS_ENDPOINT_URL_S3、AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY、AWS_REGION、STORAGE_BUCKET');
+  console.error('  AWS_ENDPOINT_URL_S3、AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY、AWS_REGION（或對應的 S3_*）、STORAGE_BUCKET');
   process.exit(1);
 }
 

@@ -469,9 +469,9 @@ export default function FileManager({ onBackToNotes, notify }) {
               <h2>尚未連接物件儲存</h2>
               <p>檔案庫使用與 Neon 資料庫同一個專案的 Neon Object Storage。設定以下環境變數後即可使用：</p>
               <ul>
-                <li><code>AWS_ENDPOINT_URL_S3</code>：分支的儲存端點</li>
-                <li><code>AWS_ACCESS_KEY_ID</code>／<code>AWS_SECRET_ACCESS_KEY</code>：儲存憑證</li>
-                <li><code>AWS_REGION</code>：例如 <code>aws-ap-southeast-1</code></li>
+                <li><code>S3_ENDPOINT</code>：分支的儲存端點</li>
+                <li><code>S3_ACCESS_KEY_ID</code>／<code>S3_SECRET_ACCESS_KEY</code>：儲存憑證</li>
+                <li><code>S3_REGION</code>：例如 <code>aws-ap-southeast-1</code></li>
                 <li><code>STORAGE_BUCKET</code>：bucket 名稱</li>
               </ul>
               <p className="files-setup-hint">

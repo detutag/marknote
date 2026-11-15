@@ -41,7 +41,7 @@ if (!dbUrl) {
   process.exit(1);
 }
 if (!getStorageConfig().configured) {
-  console.error('✗ 尚未設定物件儲存（AWS_ENDPOINT_URL_S3、AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY、AWS_REGION 或對應的 S3_*，以及 STORAGE_BUCKET）');
+  console.error('✗ 尚未設定物件儲存（S3_ENDPOINT、S3_ACCESS_KEY_ID、S3_SECRET_ACCESS_KEY、S3_REGION、STORAGE_BUCKET）');
   process.exit(1);
 }
 if (process.env.NEON_FETCH_ENDPOINT) neonConfig.fetchEndpoint = process.env.NEON_FETCH_ENDPOINT;

@@ -4,7 +4,7 @@
  *   npm run storage:init
  *
  * 需要 .env／.env.local 或環境變數：
- *   AWS_ENDPOINT_URL_S3、AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY、AWS_REGION、STORAGE_BUCKET
+ *   S3_ENDPOINT、S3_ACCESS_KEY_ID、S3_SECRET_ACCESS_KEY、S3_REGION、STORAGE_BUCKET
  * 選用：
  *   APP_ORIGIN=https://your-site.netlify.app  （逗號分隔可設定多個來源）
  */
@@ -34,7 +34,7 @@ const { ensureBucket } = await import('../lib/storage.js');
 const cfg = getStorageConfig();
 if (!cfg.configured) {
   console.error('✗ 尚未設定物件儲存，請確認以下變數：');
-  console.error('  AWS_ENDPOINT_URL_S3、AWS_ACCESS_KEY_ID、AWS_SECRET_ACCESS_KEY、AWS_REGION（或對應的 S3_*）、STORAGE_BUCKET');
+  console.error('  S3_ENDPOINT、S3_ACCESS_KEY_ID、S3_SECRET_ACCESS_KEY、S3_REGION、STORAGE_BUCKET');
   process.exit(1);
 }
 

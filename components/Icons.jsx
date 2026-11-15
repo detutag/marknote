@@ -184,6 +184,13 @@ const PATHS = {
       <path d="M9.5 4v16" />
     </>
   ),
+  panels: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M7.5 4v16M12 4v16" />
+    </>
+  ),
+  focus: <path d="M4 9V5a1 1 0 011-1h4M15 4h4a1 1 0 011 1v4M20 15v4a1 1 0 01-1 1h-4M9 20H5a1 1 0 01-1-1v-4" />,
   upload: <path d="M12 16V4M7 9l5-5 5 5M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1" />,
   warning: (
     <>

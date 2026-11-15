@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { safeNextPath } from './lib/redirect.js';
 import { getSessionCookieName } from './lib/config';
 import { verifySessionToken } from './lib/session';
 
@@ -21,7 +22,7 @@ export async function middleware(req) {
   const session = await verifySessionToken(token);
 
   if (pathname.startsWith('/login')) {
-    if (session) return NextResponse.redirect(new URL('/', req.url));
+    if (session) return NextResponse.redirect(new URL(safeNextPath(req.nextUrl.searchParams.get('next')), req.url));
     return NextResponse.next();
   }
 
@@ -31,8 +32,10 @@ export async function middleware(req) {
     return NextResponse.json({ error: '尚未登入或 session 已過期' }, { status: 401 });
   }
 
+  // 帶上原本要去的頁面，登入後由 LoginForm 導回
   const url = new URL('/login', req.url);
-  if (pathname !== '/' || search) url.search = search;
+  const next = safeNextPath(pathname + search);
+  if (next !== '/') url.searchParams.set('next', next);
   return NextResponse.redirect(url);
 }
 

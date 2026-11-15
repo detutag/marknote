@@ -58,7 +58,7 @@ try {
   if (reset) {
     console.log('⚠ 清空既有資料表（筆記、分類、標籤、檔案庫）…');
     await sql.query('DROP TABLE IF EXISTS note_tags, notes, tags, categories, files, folders CASCADE');
-    console.log('  注意：物件儲存（bucket）內的檔案不會被刪除，如需清空請到 Neon Console → Storage 處理。');
+    console.log('  注意：物件儲存（bucket）內的檔案不會被刪除，24 小時後可用 npm run storage:gc -- --delete 清掉，或到 Neon Console → Storage 處理。');
   }
 
   console.log(`→ 套用 ${statements.length} 個敘述到資料庫…`);

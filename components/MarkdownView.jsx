@@ -1,13 +1,20 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import rehypeHighlight from 'rehype-highlight';
 import { Icon } from './Icons';
-import { buildSanitizeSchema, classifyMediaUrl, isAllowedEmbedHost, isSafeMediaUrl, resolveEmbed } from '@/lib/media';
+import {
+  buildSanitizeSchema,
+  classifyMediaUrl,
+  isAllowedEmbedHost,
+  isSafeMediaUrl,
+  makeMarkdownUrlTransform,
+  resolveEmbed,
+} from '@/lib/media';
 
 /**
  * 閱讀模式的 Markdown 渲染器。
@@ -17,6 +24,7 @@ import { buildSanitizeSchema, classifyMediaUrl, isAllowedEmbedHost, isSafeMediaU
  */
 
 const sanitizeSchema = buildSanitizeSchema();
+const urlTransform = makeMarkdownUrlTransform(defaultUrlTransform);
 
 function nodeText(node) {
   if (!node) return '';
@@ -282,6 +290,7 @@ export default function MarkdownView({ content = '', embedHosts = [], className 
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema], rehypeHighlight]}
         components={components}
+        urlTransform={urlTransform}
         skipHtml={false}
       >
         {text}

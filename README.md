@@ -80,6 +80,12 @@ bash dev/run-local.sh stop
    ```
 
 6. 部署後開啟網站 → 輸入 `APP_PASSWORD` 登入。
+7. （選用）定期清理沒登記到資料庫的孤兒物件（例如上傳後網路中斷）：
+
+   ```bash
+   npm run storage:gc              # 只列出超過 24 小時的孤兒
+   npm run storage:gc -- --delete  # 確認後刪除
+   ```
 
 > 注意：`DATABASE_URL` 請用 **pooled** 連線；`AUTH_SECRET` 一旦更換，既有 session 會全部失效。
 

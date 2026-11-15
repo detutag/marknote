@@ -47,10 +47,20 @@ export const POST = route(async (req) => {
 
   if (await getFileByKey(key)) return fail('這個檔案已經登記過了', 409);
 
+  // 走到這裡代表物件（若存在）尚未登記；之後任何失敗都順手刪掉，避免 bucket 留下孤兒
+  const discard = () =>
+    deleteObject(key).catch((err) => console.error('[storage] 清除未登記物件失敗', key, err));
+
   let folderId = body.folderId ?? null;
   if (folderId === '') folderId = null;
-  if (folderId && !isUuid(folderId)) return fail('資料夾 ID 格式不正確', 400);
-  if (folderId && !(await getFolder(folderId))) return fail('上層資料夾不存在', 404);
+  if (folderId && !isUuid(folderId)) {
+    await discard();
+    return fail('資料夾 ID 格式不正確', 400);
+  }
+  if (folderId && !(await getFolder(folderId))) {
+    await discard();
+    return fail('上層資料夾不存在', 404);
+  }
 
   let head;
   try {
@@ -62,17 +72,23 @@ export const POST = route(async (req) => {
   if (!head) return fail('找不到剛上傳的檔案，請重新上傳', 400);
 
   if (head.size > getMaxUploadBytes()) {
-    await deleteObject(key).catch(() => {});
+    await discard();
     return fail('檔案超過大小上限', 413);
   }
 
-  const file = await createFile({
-    name: cleanFileName(body.name),
-    mime: cleanMime(head.contentType || body.mime),
-    size: head.size || Number(body.size) || 0,
-    objectKey: key,
-    folderId,
-  });
+  let file;
+  try {
+    file = await createFile({
+      name: cleanFileName(body.name),
+      mime: cleanMime(head.contentType || body.mime),
+      size: head.size || Number(body.size) || 0,
+      objectKey: key,
+      folderId,
+    });
+  } catch (err) {
+    await discard();
+    throw err;
+  }
 
   return json({ file: fileDto(file) }, { status: 201 });
 });

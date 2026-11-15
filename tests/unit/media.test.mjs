@@ -164,6 +164,7 @@ test('buildSanitizeSchema：放行媒體標籤、擋下 script 與事件屬性',
   assert.ok(schema.attributes.video.includes('controls'));
   assert.ok(schema.attributes.iframe.includes('allowFullScreen'));
   assert.ok(schema.attributes.input.includes('checked'), 'GFM 待辦清單需要 checked');
-  assert.deepEqual(schema.protocols.src, ['http', 'https']);
+  // data 只為內嵌圖片保留，實際由 makeMarkdownUrlTransform 限定在 <img>
+  assert.deepEqual(schema.protocols.src, ['http', 'https', 'data']);
   assert.equal(schema.allowComments, false);
 });

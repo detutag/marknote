@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/client';
 import { Icon, Logo } from './Icons';
 import { useTheme } from '@/lib/theme';
+import { safeNextPath } from '@/lib/redirect';
 
 /** 登入畫面：單一密碼（由環境變數 APP_PASSWORD 控制） */
 export default function LoginForm({ appName = 'MarkNote' }) {
@@ -30,7 +31,9 @@ export default function LoginForm({ appName = 'MarkNote' }) {
       if (res?.db && res.db.ok === false) {
         setError(`已登入，但資料庫連線失敗：${res.db.error}`);
       }
-      window.location.href = '/';
+      // 回到登入前要去的頁面（只接受站內路徑）
+      const next = new URLSearchParams(window.location.search).get('next');
+      window.location.href = safeNextPath(next);
     } catch (err) {
       setError(err.message || '登入失敗');
       setBusy(false);

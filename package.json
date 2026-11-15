@@ -6,7 +6,7 @@
   "description": "類 Notion 的 Markdown 筆記 Web App（Netlify + Neon Postgres）",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/init-db.mjs --if-configured && next build",
     "start": "next start",
     "db:init": "node scripts/init-db.mjs",
     "db:reset": "node scripts/init-db.mjs --reset",

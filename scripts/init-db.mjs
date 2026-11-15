@@ -3,6 +3,8 @@
  *
  *   npm run db:init            # 建立表格與索引
  *   npm run db:reset           # 先清空資料（DROP TABLE）再重建
+ *   node scripts/init-db.mjs --if-configured
+ *                              # 部署建置用：沒有 DATABASE_URL 或 DB_AUTO_INIT=0 時直接跳過
  *
  * 使用與應用程式完全相同的 Neon HTTP 路徑，因此本機（搭配 dev/shim）
  * 與 Neon 雲端都能用同一個指令。需要 .env 或環境變數中的 DATABASE_URL。
@@ -30,6 +32,18 @@ function loadDotEnv() {
 loadDotEnv();
 
 const url = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+const ifConfigured = process.argv.includes('--if-configured');
+if (ifConfigured) {
+  const flag = String(process.env.DB_AUTO_INIT ?? '').trim().toLowerCase();
+  if (['0', 'false', 'off', 'no'].includes(flag)) {
+    console.log('→ DB_AUTO_INIT 已關閉，略過建表');
+    process.exit(0);
+  }
+  if (!url) {
+    console.log('→ 未設定 DATABASE_URL，略過建表');
+    process.exit(0);
+  }
+}
 if (!url) {
   console.error('✗ 尚未設定 DATABASE_URL');
   process.exit(1);

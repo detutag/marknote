@@ -38,6 +38,7 @@
 | `STORAGE_BUCKET` | 檔案庫 | bucket 名稱，例如 `marknote-files` |
 | `STORAGE_MAX_UPLOAD_MB` | – | 單檔上限，預設 200（上限 5120） |
 | `STORAGE_AUTO_CORS` | – | 預設開啟：上傳時自動把目前網站來源加進 bucket CORS；設 `0` 關閉 |
+| `DB_AUTO_INIT` | – | 預設開啟：`npm run build` 前自動建立缺少的資料表；設 `0` 關閉 |
 | `APP_ORIGIN` | – | 只給 `storage:init` 手動設定 CORS 用，逗號分隔多來源 |
 
 > 檔案庫的變數全部留空時，筆記功能照常運作，檔案庫頁面會顯示設定說明。
@@ -68,8 +69,8 @@ bash dev/run-local.sh stop
 
 ## 部署到 Netlify
 
-1. 建立 Neon 專案，取得 pooled 連線字串，執行 `DATABASE_URL=... npm run db:init` 建表；
-   或直接把 `sql/neon-editor.sql` 整份貼進 Neon Console 的 SQL Editor 執行（單一交易、可重複執行）。
+1. 建立 Neon 專案，取得 pooled 連線字串。部署建置時會自動建立缺少的資料表（可重複執行，不動既有資料）；
+   想手動建表也可執行 `DATABASE_URL=... npm run db:init`，或直接把 `sql/neon-editor.sql` 整份貼進 Neon Console 的 SQL Editor 執行（單一交易、可重複執行）。
 2. Netlify 新增站台並連結此 repo；`netlify.toml` 已設定 build command `npm run build`、publish `.next`（Next.js Runtime 由 Netlify 自動套用）。
 3. 在 Site settings → Environment variables 設定 `DATABASE_URL`、`APP_PASSWORD`、`AUTH_SECRET`（可選 `NEXT_PUBLIC_APP_NAME` 等）。
 4. 啟用檔案庫：Neon Console → Storage 建立 bucket，取得 S3 端點與金鑰，在 Netlify 加上

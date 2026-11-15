@@ -4,7 +4,7 @@
  * 目的：讓整合測試走真實的 AWS SDK 簽章／HTTP 路徑，而不需要外網或 Docker。
  * 不驗證簽章，資料存在記憶體中，重啟即清空。
  *
- * 支援：CreateBucket、HeadBucket、PutBucketCors、PutObject、HeadObject、GetObject（含 Range）、
+ * 支援：CreateBucket、HeadBucket、GetBucketCors、PutBucketCors、PutObject、HeadObject、GetObject（含 Range）、
  *       DeleteObject、DeleteObjects（POST ?delete）、ListObjectsV2。
  */
 import http from 'node:http';
@@ -13,6 +13,7 @@ const PORT = Number(process.env.S3_PORT || 5600);
 
 /** @type {Map<string, Map<string, {body: Buffer, contentType: string}>>} */
 const buckets = new Map();
+const corsConfigs = new Map(); // bucket -> CORS XML
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -68,8 +69,13 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'PUT' && url.searchParams.has('cors')) {
         if (!buckets.has(bucket)) return s3Error(res, 404, 'NoSuchBucket', bucket);
-        await readBody(req);
+        corsConfigs.set(bucket, (await readBody(req)).toString('utf8'));
         return send(res, 200);
+      }
+      if (req.method === 'GET' && url.searchParams.has('cors')) {
+        const xml = corsConfigs.get(bucket);
+        if (!xml) return s3Error(res, 404, 'NoSuchCORSConfiguration', bucket);
+        return send(res, 200, xml, { 'Content-Type': 'application/xml' });
       }
       if (req.method === 'HEAD') {
         return buckets.has(bucket) ? send(res, 200) : s3Error(res, 404, 'NoSuchBucket', bucket);

@@ -37,7 +37,9 @@
 | `S3_REGION` | 檔案庫 | 例如 `ap-southeast-1`，預設 `us-east-1` |
 | `STORAGE_BUCKET` | 檔案庫 | bucket 名稱，例如 `marknote-files` |
 | `STORAGE_MAX_UPLOAD_MB` | – | 單檔上限，預設 200（上限 5120） |
-| `APP_ORIGIN` | – | `storage:init` 設定 CORS 用，逗號分隔多來源 |
+| `STORAGE_AUTO_CORS` | – | 預設開啟：上傳時自動把目前網站來源加進 bucket CORS；設 `0` 關閉 |
+| `DB_AUTO_INIT` | – | 預設開啟：`npm run build` 前自動建立缺少的資料表；設 `0` 關閉 |
+| `APP_ORIGIN` | – | 只給 `storage:init` 手動設定 CORS 用，逗號分隔多來源 |
 
 > 檔案庫的變數全部留空時，筆記功能照常運作，檔案庫頁面會顯示設定說明。
 
@@ -67,13 +69,15 @@ bash dev/run-local.sh stop
 
 ## 部署到 Netlify
 
-1. 建立 Neon 專案，取得 pooled 連線字串，執行 `DATABASE_URL=... npm run db:init` 建表；
-   或直接把 `sql/neon-editor.sql` 整份貼進 Neon Console 的 SQL Editor 執行（單一交易、可重複執行）。
+1. 建立 Neon 專案，取得 pooled 連線字串。部署建置時會自動建立缺少的資料表（可重複執行，不動既有資料）；
+   想手動建表也可執行 `DATABASE_URL=... npm run db:init`，或直接把 `sql/neon-editor.sql` 整份貼進 Neon Console 的 SQL Editor 執行（單一交易、可重複執行）。
 2. Netlify 新增站台並連結此 repo；`netlify.toml` 已設定 build command `npm run build`、publish `.next`（Next.js Runtime 由 Netlify 自動套用）。
 3. 在 Site settings → Environment variables 設定 `DATABASE_URL`、`APP_PASSWORD`、`AUTH_SECRET`（可選 `NEXT_PUBLIC_APP_NAME` 等）。
 4. 啟用檔案庫：Neon Console → Storage 建立 bucket，取得 S3 端點與金鑰，在 Netlify 加上
    `S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY`、`S3_REGION`、`STORAGE_BUCKET`。
-5. 本機執行一次儲存初始化（建立 bucket 並設定 CORS）：
+5. CORS 不用手動設定：第一次上傳時，伺服器會自動把目前網站的網域加進 bucket CORS，
+   之後換網域、加自訂網域或新的部署網址都一樣自動處理。
+   若 bucket 尚未建立，或想手動指定來源，可在本機執行：
 
    ```bash
    APP_ORIGIN=https://your-site.netlify.app npm run storage:init
@@ -98,11 +102,7 @@ Next.js 由 Vercel 原生支援，不需要額外設定（`netlify.toml` 會被�
 3. Settings → Environment Variables 設定 `DATABASE_URL`、`APP_PASSWORD`、`AUTH_SECRET`；
    想在 Preview 部署測試，記得把變數也勾選 Preview 環境。
 4. 啟用檔案庫：與 Netlify 相同，設定 `S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY`、`S3_REGION`、`STORAGE_BUCKET`。
-5. 用正式網址初始化 bucket CORS（多個網址以逗號分隔，Preview 網址也可加入）：
-
-   ```bash
-   APP_ORIGIN=https://your-project.vercel.app npm run storage:init
-   ```
+5. CORS 會在第一次上傳時自動加入目前網域（Production、Preview、自訂網域都適用），不必手動執行 `storage:init`。
 
 6. 上傳走瀏覽器直傳 bucket 的 presigned URL，不受 Vercel 函式 4.5 MB 請求大小限制。
 

@@ -14,8 +14,10 @@ export async function GET() {
       const rows = await query('SELECT 1 AS ok');
       payload.db = { ok: true, rows: rows?.length ?? 0 };
     } catch (err) {
+      // 原始錯誤可能含資料庫主機名等內部資訊，只寫進伺服器 log，不回給未登入的請求
+      console.error('[health] 資料庫連線失敗：', err);
       payload.ok = false;
-      payload.db = { ok: false, error: err?.message || String(err) };
+      payload.db = { ok: false, error: '資料庫無法連線，詳情請查看伺服器 log' };
     }
   } else {
     payload.ok = false;

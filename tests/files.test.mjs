@@ -91,7 +91,7 @@ test('登入並確認物件儲存已設定', async () => {
 
   const storage = await call('/api/storage');
   assert.equal(storage.status, 200, storage.text);
-  assert.equal(storage.json.configured, true, '請確認伺服器已設定 AWS_ENDPOINT_URL_S3 等變數');
+  assert.equal(storage.json.configured, true, '請確認伺服器已設定 S3_ENDPOINT 等變數');
   assert.ok(storage.json.maxUploadBytes > 0);
 });
 

@@ -31,11 +31,10 @@
 | `COOKIE_SECURE` | – | `auto`（預設）／`true`／`false` |
 | `EMBED_ALLOWLIST` | – | 允許 iframe 內嵌的網域，逗號分隔 |
 | `NEON_FETCH_ENDPOINT` | – | 僅本機測試用，導向 Neon 相容 shim |
-| `AWS_ENDPOINT_URL_S3` | 檔案庫 | Neon Object Storage 端點（Console → Storage 取得） |
-| `AWS_ACCESS_KEY_ID` | 檔案庫 | 物件儲存存取金鑰 |
-| `AWS_SECRET_ACCESS_KEY` | 檔案庫 | 物件儲存私鑰 |
-| `AWS_REGION` | 檔案庫 | 例如 `ap-southeast-1`，預設 `us-east-1` |
-| `S3_ENDPOINT`／`S3_ACCESS_KEY_ID`／`S3_SECRET_ACCESS_KEY`／`S3_REGION` | – | 上面四個 `AWS_*` 的同義變數，兩者都有時優先採用 `S3_*`（Vercel 建議用這組） |
+| `S3_ENDPOINT` | 檔案庫 | Neon Object Storage 端點（Console → Storage 取得） |
+| `S3_ACCESS_KEY_ID` | 檔案庫 | 物件儲存存取金鑰 |
+| `S3_SECRET_ACCESS_KEY` | 檔案庫 | 物件儲存私鑰 |
+| `S3_REGION` | 檔案庫 | 例如 `ap-southeast-1`，預設 `us-east-1` |
 | `STORAGE_BUCKET` | 檔案庫 | bucket 名稱，例如 `marknote-files` |
 | `STORAGE_MAX_UPLOAD_MB` | – | 單檔上限，預設 200（上限 5120） |
 | `APP_ORIGIN` | – | `storage:init` 設定 CORS 用，逗號分隔多來源 |
@@ -73,7 +72,7 @@ bash dev/run-local.sh stop
 2. Netlify 新增站台並連結此 repo；`netlify.toml` 已設定 build command `npm run build`、publish `.next`（Next.js Runtime 由 Netlify 自動套用）。
 3. 在 Site settings → Environment variables 設定 `DATABASE_URL`、`APP_PASSWORD`、`AUTH_SECRET`（可選 `NEXT_PUBLIC_APP_NAME` 等）。
 4. 啟用檔案庫：Neon Console → Storage 建立 bucket，取得 S3 端點與金鑰，在 Netlify 加上
-   `AWS_ENDPOINT_URL_S3`、`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_REGION`、`STORAGE_BUCKET`。
+   `S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY`、`S3_REGION`、`STORAGE_BUCKET`。
 5. 本機執行一次儲存初始化（建立 bucket 並設定 CORS）：
 
    ```bash
@@ -98,8 +97,7 @@ Next.js 由 Vercel 原生支援，不需要額外設定（`netlify.toml` 會被�
 2. Vercel → Add New → Project，匯入此 repo；Framework 自動偵測為 Next.js，Build／Output 用預設值。
 3. Settings → Environment Variables 設定 `DATABASE_URL`、`APP_PASSWORD`、`AUTH_SECRET`；
    想在 Preview 部署測試，記得把變數也勾選 Preview 環境。
-4. 啟用檔案庫：建議用 `S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY`、`S3_REGION`、`STORAGE_BUCKET`。
-   Vercel 會在函式內自動注入 `AWS_REGION` 等變數（不是你的金鑰），用 `S3_*` 可避免讀到平台的值。
+4. 啟用檔案庫：與 Netlify 相同，設定 `S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY`、`S3_REGION`、`STORAGE_BUCKET`。
 5. 用正式網址初始化 bucket CORS（多個網址以逗號分隔，Preview 網址也可加入）：
 
    ```bash

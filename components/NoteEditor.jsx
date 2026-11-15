@@ -17,7 +17,16 @@ import { snippetForFile, uploadFile } from '@/lib/upload';
 const PREFIX_RE = /^(\s*)(?:-\s\[[ xX]\]\s|>\s?|[-*+]\s|\d+[.)]\s)/;
 const AUTOSAVE_DELAY = 900;
 
-export default function NoteEditor({ store, variant = 'desktop', onBack, onRequestDelete, onToggleSidebar }) {
+export default function NoteEditor({
+  store,
+  variant = 'desktop',
+  onBack,
+  onRequestDelete,
+  onToggleSidebar,
+  onToggleList,
+  onToggleFocus,
+  panesHidden = false,
+}) {
   const note = store.selectedNote;
   const noteId = note?.id ?? null;
   const { mode, setMode, saveState, embedHosts, categories } = store;
@@ -417,7 +426,13 @@ export default function NoteEditor({ store, variant = 'desktop', onBack, onReque
               <Icon name="plus" size={15} />
               新增筆記
             </button>
-            {!isMobile && (
+            {!isMobile && !store.listOpen && (
+              <button type="button" className="btn" onClick={onToggleList}>
+                <Icon name="list" size={15} />
+                顯示筆記列表
+              </button>
+            )}
+            {!isMobile && !store.sidebarOpen && (
               <button type="button" className="btn" onClick={onToggleSidebar}>
                 <Icon name="sidebar" size={15} />
                 顯示側邊欄
@@ -497,9 +512,38 @@ export default function NoteEditor({ store, variant = 'desktop', onBack, onReque
           </button>
         )}
         {!isMobile && (
-          <button type="button" className="icon-btn" onClick={onToggleSidebar} title="切換側邊欄" aria-label="切換側邊欄">
-            <Icon name="sidebar" size={17} />
-          </button>
+          <div className="pane-toggles" role="group" aria-label="版面">
+            <button
+              type="button"
+              className={`icon-btn ${store.sidebarOpen ? 'is-on' : ''}`}
+              onClick={onToggleSidebar}
+              title={store.sidebarOpen ? '收起側邊欄' : '展開側邊欄'}
+              aria-label="切換側邊欄"
+              aria-pressed={store.sidebarOpen}
+            >
+              <Icon name="sidebar" size={17} />
+            </button>
+            <button
+              type="button"
+              className={`icon-btn ${store.listOpen ? 'is-on' : ''}`}
+              onClick={onToggleList}
+              title={`${store.listOpen ? '收起' : '展開'}筆記列表（Ctrl/⌘ + Shift + \\）`}
+              aria-label="切換筆記列表"
+              aria-pressed={store.listOpen}
+            >
+              <Icon name="list" size={17} />
+            </button>
+            <button
+              type="button"
+              className={`icon-btn ${panesHidden ? 'is-on' : ''}`}
+              onClick={onToggleFocus}
+              title={`${panesHidden ? '離開' : '進入'}專注模式（Ctrl/⌘ + \\）`}
+              aria-label="專注模式"
+              aria-pressed={panesHidden}
+            >
+              <Icon name="focus" size={16} />
+            </button>
+          </div>
         )}
 
         <div className="editor-crumb">

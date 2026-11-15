@@ -34,8 +34,8 @@
   --radius-sm: 5px;
   --radius: 8px;
   --radius-lg: 12px;
-  --sidebar-w: 254px;
-  --list-w: 316px;
+  --sidebar-w: 224px;
+  --list-w: 272px;
   --topbar-h: 48px;
 }
 
@@ -275,9 +275,25 @@ a {
 
 .app-main {
   display: grid;
-  grid-template-columns: minmax(260px, var(--list-w)) minmax(0, 1fr);
+  grid-template-columns: minmax(232px, var(--list-w)) minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
+}
+
+/* 桌面：筆記列表收起後，編輯區佔滿 */
+.app.is-desktop.list-closed .app-main {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.pane-toggles {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: none;
+}
+
+.pane-toggles .icon-btn:not(.is-on) {
+  color: var(--text-3);
 }
 
 .mobile-topbar {
@@ -2512,8 +2528,8 @@ a {
 /* 平板：側邊欄折疊時給列表多一點空間 */
 @media (min-width: 1024px) and (max-width: 1240px) {
   :root {
-    --sidebar-w: 224px;
-    --list-w: 280px;
+    --sidebar-w: 204px;
+    --list-w: 248px;
   }
 }
 

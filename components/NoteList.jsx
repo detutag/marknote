@@ -14,6 +14,7 @@ export default function NoteList({
   onNewNote,
   onRequestMoveCategory,
   onRequestDelete,
+  onCollapse,
   variant = 'desktop',
 }) {
   const {
@@ -59,6 +60,11 @@ export default function NoteList({
           <button type="button" className="icon-btn" onClick={onNewNote} title="新增筆記" aria-label="新增筆記">
             <Icon name="plus" size={17} />
           </button>
+          {onCollapse && (
+            <button type="button" className="icon-btn" onClick={onCollapse} title="收起筆記列表" aria-label="收起筆記列表">
+              <Icon name="chevronLeft" size={16} />
+            </button>
+          )}
         </div>
       </header>
 

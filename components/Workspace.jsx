@@ -67,6 +67,27 @@ export default function Workspace() {
     [store, isMobile],
   );
 
+  // 桌面：專注模式＝同時收起側邊欄與筆記列表；再按一次兩者都展開
+  const panesHidden = !store.sidebarOpen && !store.listOpen;
+  const toggleFocus = useCallback(() => {
+    const open = !store.sidebarOpen && !store.listOpen;
+    store.setSidebarOpen(open);
+    store.setListOpen(open);
+  }, [store]);
+
+  // 快捷鍵：Ctrl/⌘ + \ 專注模式，Ctrl/⌘ + Shift + \ 只切換筆記列表
+  useEffect(() => {
+    if (isMobile) return undefined;
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || (e.key !== '\\' && e.code !== 'Backslash')) return;
+      e.preventDefault();
+      if (e.shiftKey) store.setListOpen(!store.listOpen);
+      else toggleFocus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isMobile, store, toggleFocus]);
+
   const logout = useCallback(async () => {
     try {
       await api.logout();
@@ -129,7 +150,7 @@ export default function Workspace() {
     <div
       className={`app ${isMobile ? 'is-mobile' : 'is-desktop'} ${
         store.sidebarOpen ? 'sidebar-open' : 'sidebar-closed'
-      } mobile-pane-${isMobile ? mobilePane : 'none'}`}
+      } ${isMobile || store.listOpen ? 'list-open' : 'list-closed'} mobile-pane-${isMobile ? mobilePane : 'none'}`}
     >
       {!isMobile &&
         (store.sidebarOpen ? (
@@ -167,14 +188,17 @@ export default function Workspace() {
           </header>
         )}
 
-        <NoteList
-          store={store}
-          variant={isMobile ? 'mobile' : 'desktop'}
-          onOpenNote={openNote}
-          onNewNote={() => newNote()}
-          onRequestMoveCategory={(n) => setDialog({ type: 'note-move', note: n })}
-          onRequestDelete={(n) => setDialog({ type: 'note-delete', note: n })}
-        />
+        {(isMobile || store.listOpen) && (
+          <NoteList
+            store={store}
+            variant={isMobile ? 'mobile' : 'desktop'}
+            onOpenNote={openNote}
+            onNewNote={() => newNote()}
+            onRequestMoveCategory={(n) => setDialog({ type: 'note-move', note: n })}
+            onRequestDelete={(n) => setDialog({ type: 'note-delete', note: n })}
+            onCollapse={isMobile ? undefined : () => store.setListOpen(false)}
+          />
+        )}
 
         <NoteEditor
           store={store}
@@ -182,6 +206,9 @@ export default function Workspace() {
           onBack={() => setMobilePane('list')}
           onRequestDelete={(n) => setDialog({ type: 'note-delete', note: n })}
           onToggleSidebar={() => store.setSidebarOpen(!store.sidebarOpen)}
+          onToggleList={() => store.setListOpen(!store.listOpen)}
+          onToggleFocus={toggleFocus}
+          panesHidden={panesHidden}
         />
       </div>
 

@@ -2,7 +2,8 @@ import { fail, guard, isUuid, json, readBody, route } from '@/lib/api';
 import { getMaxUploadBytes, isStorageConfigured } from '@/lib/config';
 import { cleanFileName, cleanMime } from '@/lib/file-utils';
 import { getFolder } from '@/lib/filedata';
-import { newObjectKey, presignUpload } from '@/lib/storage';
+import { requestSiteOrigin } from '@/lib/cors';
+import { ensureCorsOrigin, newObjectKey, presignUpload } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,9 @@ export const POST = route(async (req) => {
   if (folderId && !(await getFolder(folderId))) return fail('上層資料夾不存在', 404);
 
   const key = newObjectKey();
+
+  // 自動把本站來源加進 bucket CORS（換網域、新部署都不用手動設定）
+  await ensureCorsOrigin(requestSiteOrigin(req.headers));
 
   let signed;
   try {

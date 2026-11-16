@@ -1,5 +1,5 @@
 import { fail, guard, route } from '@/lib/api';
-import { APP_NAME, getEmbedAllowlist } from '@/lib/config';
+import { APP_NAME, getAiConfig, getEmbedAllowlist } from '@/lib/config';
 import { listCategories, listNotes, listTags } from '@/lib/data';
 
 /**
@@ -28,5 +28,12 @@ export const GET = route(async (req) => {
     tags,
     notes,
     archivedCount: archived.length,
+    ai: aiStatus(),
   });
 });
+
+/** 只回傳前端需要的資訊，金鑰與端點不外流 */
+function aiStatus() {
+  const cfg = getAiConfig();
+  return { enabled: cfg.configured, model: cfg.configured ? cfg.model : '' };
+}

@@ -14,6 +14,9 @@
 - **檔案庫**：多檔上傳（含拖放）、資料夾樹（新增／改名／搬移／刪除）、檔案預覽（圖片／音訊／影片／文字）、
   移動與刪除（刪除前確認；資料夾非空需明確同意）、側欄統計用量。物件儲存走 Neon Object Storage。
 - **筆記插入檔案**：編輯器工具列可上傳單一圖片／音訊／影片並插入對應 Markdown／HTML，閱讀模式直接顯示播放。
+- **AI 整理**（選用）：串接任何 OpenAI 相容模型，在編輯器內潤飾、修正錯字、精簡、擴寫、整理結構、摘要、翻譯、自訂指令，
+  並可建議標題／分類／標籤。有選取文字時只處理選取範圍；結果先預覽（可看差異、可手動修改），按下才套用，可一鍵復原。
+- **MCP 端點**（選用）：`/api/mcp` 讓 Claude Desktop、Cursor、Codex 等 AI agent 直接搜尋、讀取、建立與更新筆記。
 - **安全**：Markdown 以 `rehype-raw` + `rehype-sanitize` 過濾後才渲染；API 一律回 JSON；所有 SQL 皆參數化；登入有簡易限流。
 - **版面**：桌面三欄（側欄可收合）；手機登入後先看到筆記列表，點筆記才進內文，側欄改為抽屜。
 
@@ -40,8 +43,84 @@
 | `STORAGE_AUTO_CORS` | – | 預設開啟：上傳時自動把目前網站來源加進 bucket CORS；設 `0` 關閉 |
 | `DB_AUTO_INIT` | – | 預設開啟：`npm run build` 前自動建立缺少的資料表；設 `0` 關閉 |
 | `APP_ORIGIN` | – | 只給 `storage:init` 手動設定 CORS 用，逗號分隔多來源 |
+| `MCP_TOKEN` | MCP | agent 存取 `/api/mcp` 的權杖（`openssl rand -base64 32`）；留空則停用 MCP |
+| `MCP_READONLY` | – | 設 `1` 時 MCP 只開放讀取工具 |
+| `AI_BASE_URL` | AI | OpenAI 相容端點，例如 `https://api.openai.com/v1`、`http://localhost:11434/v1` |
+| `AI_API_KEY` | AI | 模型服務金鑰（只在伺服器使用，不會傳到瀏覽器）；本機模型可留空 |
+| `AI_MODEL` | AI | 模型名稱，例如 `gpt-4o-mini`、`deepseek-chat`、`qwen2.5:14b` |
+| `AI_TEMPERATURE` | – | 預設 0.3 |
+| `AI_MAX_TOKENS` | – | 輸出上限，預設交給模型 |
+| `AI_MAX_INPUT_CHARS` | – | 單次送出字元上限，預設 60000 |
+| `AI_TIMEOUT_MS` | – | 呼叫逾時，預設 120000 |
 
 > 檔案庫的變數全部留空時，筆記功能照常運作，檔案庫頁面會顯示設定說明。
+
+## AI 整理
+
+設定 `AI_BASE_URL`、`AI_MODEL`（以及需要時的 `AI_API_KEY`）後，編輯器工具列與右上角會出現 ✦ AI 按鈕（快捷鍵 Ctrl/⌘ + J）。
+
+- 有選取文字：只處理選取範圍，可「取代選取」或「插入於下方」；沒選取：處理整篇筆記。
+- 動作：潤飾、修正錯字、精簡、擴寫、整理結構、摘要、翻譯、自訂指令；每個動作都可加額外要求。
+- 「標題／分類／標籤」：從現有分類與標籤挑選建議，勾選後套用（標籤只會新增，不會移除）。
+- 結果逐字串流顯示，可切換「差異」檢視、可直接修改再套用；套用後上方會出現「復原」。
+- 推理模型（DeepSeek-R1、QwQ…）輸出的 `<think>` 內容會自動略過。
+
+相容服務：OpenAI、Azure OpenAI（相容端點）、DeepSeek、通義千問 DashScope 相容模式、OpenRouter、Groq、
+Together、SiliconFlow、Ollama、LM Studio、vLLM 等。部署在 Netlify／Vercel 時，本機的 Ollama 需要對外可連線的網址。
+
+## MCP（給 AI agent 使用）
+
+設定 `MCP_TOKEN` 後，`https://你的網域/api/mcp` 即為 MCP Streamable HTTP 端點（無狀態、JSON 回應）。
+
+| 工具 | 說明 |
+| --- | --- |
+| `search_notes` | 關鍵字搜尋（標題、內文、標籤） |
+| `list_notes` | 列出筆記，可依分類／標籤篩選 |
+| `get_note` | 讀取完整 Markdown |
+| `list_categories`、`list_tags` | 列出分類與標籤 |
+| `create_note` | 建立筆記（標籤自動建立） |
+| `update_note` | 更新標題／內文／分類／標籤／釘選 |
+| `append_to_note` | 在筆記最後附加內容 |
+| `archive_note` | 封存或還原 |
+| `delete_note` | 永久刪除 |
+| `create_category` | 建立分類 |
+
+另提供資源 `marknote://note/{id}`（Markdown）。設定 `MCP_READONLY=1` 時只保留讀取類工具。
+
+**Claude Code**
+
+```bash
+claude mcp add --transport http marknote https://你的網域/api/mcp --header "Authorization: Bearer <MCP_TOKEN>"
+```
+
+**Cursor**（`~/.cursor/mcp.json`）
+
+```json
+{
+  "mcpServers": {
+    "marknote": {
+      "url": "https://你的網域/api/mcp",
+      "headers": { "Authorization": "Bearer <MCP_TOKEN>" }
+    }
+  }
+}
+```
+
+**Claude Desktop**（`claude_desktop_config.json`，透過 `mcp-remote` 轉接）
+
+```json
+{
+  "mcpServers": {
+    "marknote": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://你的網域/api/mcp", "--header", "Authorization: Bearer ${MCP_TOKEN}"],
+      "env": { "MCP_TOKEN": "<MCP_TOKEN>" }
+    }
+  }
+}
+```
+
+> `MCP_TOKEN` 等同完整讀寫權限，請當作密碼保管；只想讓 agent 查資料時加上 `MCP_READONLY=1`。
 
 ## 本機開發
 
@@ -55,7 +134,8 @@ npm run dev         # http://localhost:3000
 
 ## 測試
 
-- 單元測試（媒體解析、格式化、密碼比對、檔名與 MIME 處理）：`npm test`（30 項）
+- 單元測試（媒體解析、格式化、密碼比對、檔名與 MIME、MCP 協定、AI 串流解析、差異比對）：`npm test`
+- MCP 端點整合測試：伺服器以 `MCP_TOKEN` 啟動後，`BASE_URL=... MCP_TOKEN=... npm run test:mcp`
 - API 整合測試（筆記／分類／標籤）：需要先啟動伺服器，再 `BASE_URL=... TEST_PASSWORD=... npm run test:api`（25 項）
 - 檔案庫 API 測試：`BASE_URL=... TEST_PASSWORD=... npm run test:files`（13 項，需已設定物件儲存）
 
@@ -110,10 +190,10 @@ Next.js 由 Vercel 原生支援，不需要額外設定（`netlify.toml` 會被�
 
 ```
 app/               頁面與 API 路由（api/health、auth、session、bootstrap、notes、categories、tags、
-                   folders、files、storage）
-components/        Sidebar、NoteList、NoteEditor、MarkdownView、Modal、TagPicker、Workspace、
+                   folders、files、storage、ai、mcp）
+components/        Sidebar、NoteList、NoteEditor、AiPanel、MarkdownView、Modal、TagPicker、Workspace、
                    FileManager、FolderTree、FilePreview…
-lib/               db（Neon HTTP）、data（SQL 存取）、media（媒體解析）、store（前端狀態）、theme、
+lib/               db（Neon HTTP）、data（SQL 存取）、mcp（MCP 協定）、ai（OpenAI 相容呼叫）、diff、media（媒體解析）、store（前端狀態）、theme、
                    storage（S3 用戶端）、file-utils（檔名／MIME）、upload、filedata…
 sql/schema.sql     資料表結構（idempotent，供 scripts/init-db.mjs 使用）
 sql/neon-editor.sql 同一份結構的「單檔交易」版本，可直接貼進 Neon SQL Editor

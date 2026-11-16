@@ -5,6 +5,7 @@ import { Icon } from './Icons';
 import { Menu, PromptDialog } from './Modal';
 import MarkdownView from './MarkdownView';
 import TagPicker from './TagPicker';
+import AiPanel from './AiPanel';
 import { countWords, formatDateTime, readingTime } from '@/lib/format';
 import { snippetForFile, uploadFile } from '@/lib/upload';
 
@@ -37,6 +38,11 @@ export default function NoteEditor({
   const [dirty, setDirty] = useState(false);
   const [dialog, setDialog] = useState(null);
   const [uploading, setUploading] = useState(false);
+  // AI 面板：{ source: {text, title, scope}, range: [start, end] | null, initialAction }
+  const [ai, setAi] = useState(null);
+  // 最近一次 AI 套用前的內容，供「復原」使用
+  const [aiUndo, setAiUndo] = useState(null);
+  const aiEnabled = Boolean(store.ai?.enabled);
   const uploadRef = useRef(null);
   const editorRef = useRef(null);
   const titleRef = useRef(null);
@@ -53,6 +59,8 @@ export default function NoteEditor({
     setTitle(next.title);
     setContent(next.content);
     setDirty(false);
+    setAiUndo(null);
+    setAi(null);
     // 只在「切換筆記」或「內容首次載入完成」時重置草稿，避免打字中游標跳動
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId, contentReady]);
@@ -232,7 +240,107 @@ export default function NoteEditor({
     }
   };
 
-  // 全域快捷鍵：Ctrl/Cmd+S 立即儲存、Ctrl/Cmd+E 切換模式
+  // ── AI 整理 ───────────────────────────────────────────────────────────
+  const openAiRef = useRef(null);
+  const openAi = useCallback(
+    (initialAction) => {
+      if (!aiEnabled || !noteId) return;
+      const el = editorRef.current;
+      const draft = draftRef.current;
+      const hasSelection = Boolean(el) && el.selectionStart !== el.selectionEnd;
+      const range = hasSelection && initialAction !== 'suggest' ? [el.selectionStart, el.selectionEnd] : null;
+      const text = range ? draft.content.slice(range[0], range[1]) : draft.content;
+      setAi({
+        source: { text, title: draft.title, scope: range ? 'selection' : 'note' },
+        range,
+        initialAction: initialAction || 'polish',
+      });
+    },
+    [aiEnabled, noteId],
+  );
+  openAiRef.current = aiEnabled ? openAi : null;
+
+  const applyAi = useCallback(
+    ({ text, mode: applyMode }) => {
+      const draft = draftRef.current;
+      const current = draft.content;
+      const range = ai?.range;
+      // 若選取範圍在開啟面板後已被改動，改為附加，避免覆蓋到錯的位置
+      const rangeValid = range && current.slice(range[0], range[1]) === ai.source.text;
+      let next;
+      let caret;
+      if (applyMode === 'replace') {
+        if (range && rangeValid) {
+          next = current.slice(0, range[0]) + text + current.slice(range[1]);
+          caret = range[0] + text.length;
+        } else if (range) {
+          storeRef.current.notify?.('選取的文字已變動，改為插入到筆記最後', 'info');
+          next = `${current.replace(/\s*$/, '')}\n\n${text}`;
+          caret = next.length;
+        } else {
+          next = text;
+          caret = text.length;
+        }
+      } else {
+        const at = range && rangeValid ? range[1] : current.length;
+        const before = current.slice(0, at);
+        const after = current.slice(at);
+        const gap = before.length === 0 ? '' : before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+        const tail = after === '' || after.startsWith('\n') ? '' : '\n\n';
+        next = `${before}${gap}${text}${tail}${after}`;
+        caret = before.length + gap.length + text.length;
+      }
+      setAiUndo({ content: current, title: draft.title });
+      setContent(next);
+      updateDraft({ content: next });
+      setAi(null);
+      storeRef.current.notify?.('已套用 AI 結果', 'success');
+      requestAnimationFrame(() => {
+        const el = editorRef.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(caret, caret);
+      });
+    },
+    [ai, updateDraft],
+  );
+
+  const applySuggestion = useCallback(
+    async ({ title: newTitle, category: categoryName, tags: newTags }) => {
+      const st = storeRef.current;
+      const current = st.selectedNote;
+      if (!current) return;
+      setAi(null);
+      if (newTitle) {
+        setAiUndo({ content: draftRef.current.content, title: draftRef.current.title });
+        setTitle(newTitle);
+        updateDraft({ title: newTitle });
+      }
+      if (categoryName) {
+        const cat = st.categories.find((c) => c.name.toLowerCase() === categoryName.toLowerCase());
+        if (cat && cat.id !== current.category_id) await st.moveNoteToCategory(current.id, cat.id);
+      }
+      if (newTags?.length) {
+        const existing = (current.tags || []).map((t) => t.name);
+        const seen = new Set(existing.map((t) => t.toLowerCase()));
+        const merged = [...existing, ...newTags.filter((t) => !seen.has(t.toLowerCase()))];
+        if (merged.length !== existing.length) await st.setNoteTags(current.id, merged);
+      }
+      st.notify?.('已套用 AI 建議', 'success');
+    },
+    [updateDraft],
+  );
+
+  const undoAi = useCallback(() => {
+    if (!aiUndo) return;
+    setContent(aiUndo.content);
+    setTitle(aiUndo.title);
+    updateDraft({ content: aiUndo.content, title: aiUndo.title });
+    setAiUndo(null);
+    storeRef.current.notify?.('已復原 AI 修改', 'info');
+  }, [aiUndo, updateDraft]);
+
+  // 全域快捷鍵：Ctrl/Cmd+S 立即儲存、Ctrl/Cmd+E 切換模式、Ctrl/Cmd+J 開啟 AI
   useEffect(() => {
     const onKey = (e) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -244,6 +352,10 @@ export default function NoteEditor({
       if (e.key.toLowerCase() === 'e' && !e.shiftKey && noteId) {
         e.preventDefault();
         setMode(mode === 'read' ? 'edit' : 'read');
+      }
+      if (e.key.toLowerCase() === 'j' && !e.shiftKey && noteId && openAiRef.current) {
+        e.preventDefault();
+        openAiRef.current();
       }
     };
     document.addEventListener('keydown', onKey);
@@ -490,6 +602,13 @@ export default function NoteEditor({
       },
     },
     { key: 'move', label: '移動到分類…', icon: 'folder', onClick: () => onRequestMove(note) },
+    ...(aiEnabled
+      ? [
+          { separator: true },
+          { key: 'ai', label: 'AI 整理…', icon: 'sparkle', shortcut: '⌘J', onClick: () => openAi() },
+          { key: 'ai-suggest', label: 'AI 建議標題／分類／標籤', icon: 'tag', onClick: () => openAi('suggest') },
+        ]
+      : []),
     { separator: true },
     {
       key: 'archive',
@@ -556,6 +675,18 @@ export default function NoteEditor({
         </div>
 
         <div className="editor-actions">
+          {aiEnabled && (
+            <button
+              type="button"
+              className="icon-btn ai-trigger"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => openAi()}
+              title="AI 整理（Ctrl/⌘ + J）；有選取文字時只處理選取範圍"
+              aria-label="AI 整理"
+            >
+              <Icon name="sparkle" size={16} />
+            </button>
+          )}
           <button
             type="button"
             className={`icon-btn ${note.pinned ? 'is-on' : ''}`}
@@ -613,6 +744,18 @@ export default function NoteEditor({
           <Icon name="clock" size={12} />
           {formatDateTime(note.updated_at)}
         </span>
+        {aiUndo && (
+          <span className="meta-badge meta-badge-ai">
+            <Icon name="sparkle" size={11} />
+            已套用 AI 修改
+            <button type="button" onClick={undoAi}>
+              復原
+            </button>
+            <button type="button" onClick={() => setAiUndo(null)} aria-label="關閉">
+              <Icon name="close" size={10} />
+            </button>
+          </span>
+        )}
         {note.archived && (
           <span className="meta-badge meta-badge-warn">
             <Icon name="archive" size={11} />
@@ -642,6 +785,22 @@ export default function NoteEditor({
                     <Icon name={t.busy ? 'refresh' : t.icon} size={15} />
                   </button>
                 ),
+              )}
+              {aiEnabled && (
+                <>
+                  <span className="toolbar-sep" />
+                  <button
+                    type="button"
+                    className="toolbar-btn toolbar-ai"
+                    title="AI 整理（Ctrl/⌘ + J）；有選取文字時只處理選取範圍"
+                    aria-label="AI 整理"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => openAi()}
+                  >
+                    <Icon name="sparkle" size={15} />
+                    <span>AI</span>
+                  </button>
+                </>
               )}
             </div>
 
@@ -715,7 +874,7 @@ export default function NoteEditor({
         <span>{stats.words} 字</span>
         <span className="status-sep" />
         <span>約 {readingTime(content)} 分鐘</span>
-        {!isMobile && <span className="status-hint">Ctrl/Cmd + S 儲存・Ctrl/Cmd + E 切換編輯／閱讀</span>}
+        {!isMobile && <span className="status-hint">Ctrl/Cmd + S 儲存・Ctrl/Cmd + E 切換編輯／閱讀{aiEnabled ? '・Ctrl/Cmd + J AI 整理' : ''}</span>}
       </footer>
 
       {dialog?.type === 'move' && (
@@ -737,6 +896,21 @@ export default function NoteEditor({
             setDialog(null);
             store.moveNoteToCategory(dialog.noteId, v.categoryId);
           }}
+        />
+      )}
+
+      {ai && (
+        <AiPanel
+          open
+          source={ai.source}
+          initialAction={ai.initialAction}
+          model={store.ai?.model}
+          categories={categories}
+          noteTags={(note.tags || []).map((t) => t.name)}
+          notify={store.notify}
+          onClose={() => setAi(null)}
+          onApply={applyAi}
+          onApplySuggestion={applySuggestion}
         />
       )}
 

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "類 Notion 的 Markdown 筆記 Web App（Netlify + Neon Postgres）",
+  "description": "類 Notion 的 Markdown 筆記 Web App（Netlify + Neon Postgres），內建 MCP 端點與 AI 整理",
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/init-db.mjs --if-configured && next build",
@@ -14,7 +14,8 @@
     "test:api": "node tests/api.test.mjs",
     "storage:init": "node scripts/storage-init.mjs",
     "storage:gc": "node scripts/storage-gc.mjs",
-    "test:files": "node --test --test-reporter=spec tests/files.test.mjs"
+    "test:files": "node --test --test-reporter=spec tests/files.test.mjs",
+    "test:mcp": "node --test --test-reporter=spec tests/mcp.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1168.0",
